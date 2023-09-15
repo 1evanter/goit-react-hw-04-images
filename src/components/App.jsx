@@ -1,4 +1,3 @@
-import { Component } from "react";
 import { ToastContainer, toast } from 'react-toastify';
   import 'react-toastify/dist/ReactToastify.css';
   import { GlobalStyles } from "GlobalStyles";
@@ -9,72 +8,66 @@ import { Button } from "./Button/Button";
 import { fetchImages } from "../api.js";
 import { Loader } from "./Loader/Loader";
 import { Wrapper } from "./App.styled";
+import { useState } from 'react';
+import { useEffect } from 'react';
 
-export class App extends Component {
-  state = {
-    query: '',
-    images: [],
-    page: 1,
-    loading: false,
-  }
+export const App = () => {
+  const [query, setQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+const [totalPages, setTotalPages] = useState(1)
 
-  handleChangeQuery = newQuery => {
-    this.setState({
-      query: `${Date.now()}/${newQuery}`,
-      images: [],
-      page: 1,
-      totalPages: 1,
-  })
-  }
-  
-  async componentDidUpdate(prevProps, prevState) {
-   
-    const { query, page } = this.state;
-   
-
-    if (query !== prevState.query || page !== prevState.page) {
-      try {
-        this.setState({loading: true})
-        const searchQuery = query.slice(query.indexOf('/') + 1);
+  useEffect(() => {
+    if (query === '') {
+         return
+    }
+    
+   async function getFetchedImages() {
+     try {
+       setLoading(true);
+       const searchQuery = query.slice(query.indexOf('/') + 1);
   
         const images = await fetchImages(searchQuery, page);
          const { hits, total } = images;
        
         if (!hits.length) {
-          toast.error('Sorry, no pictures were found for your search') }
-         
-          this.setState(prevState => ({
-            images: page > 1 ? [...prevState.images, ...hits] : hits,
-            totalPages: Math.ceil(total / 12),
-          }))
-      } catch(error) {
-         console.log(error)
-      } finally {
-        this.setState({loading: false})
-      }
-      
-    }
-  } 
-  
-  handleLoadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1
-     }))
+         toast.error('Sorry, no pictures were found for your search')
+       }
+       
+       setImages(prevState => page > 1 ? [...prevState, ...hits] : hits);
+       setTotalPages(Math.ceil(total / 12))
+     } catch (error) {
+       console.log(error)
+     } finally {
+       setLoading(false)
+     }
   }
 
-  render() {
-    const { images, totalPages, page, loading } = this.state;
+  getFetchedImages();
+}, [page, query])
 
-    return <Wrapper>
-      <Searchbar onSubmit={this.handleChangeQuery} />
+  
+  
+  const handleChangeQuery = newQuery => {
+    setQuery(`${Date.now()}/${newQuery}`);
+    setImages([]);
+    setPage(1);
+    setTotalPages(1);
+  }
+
+  const handleLoadMore = () => {
+   setPage(prevState => prevState + 1)
+  }
+
+  return (
+    <Wrapper>
+      <Searchbar onSubmit={handleChangeQuery} />
       {images.length > 0 && <ImageGallery images={images} />}
-      {page < totalPages && <Button onLoadMore={this.handleLoadMore} />}
+      {page < totalPages && <Button onLoadMore={handleLoadMore} />}
       {loading && <Loader/>}
 
       <GlobalStyles />
       <ToastContainer/>
-    </Wrapper>
-  }
+    </Wrapper>)
 }
-
-
